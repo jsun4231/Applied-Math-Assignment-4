@@ -46,6 +46,51 @@ results = table(method_names,p,'VariableNames',{'Method','p (-)'});
 fprintf('Table 1. Global truncation error scaling with step size (E ~ h^p)\n\n');
 disp(results)
 
+
+% Global error plot
+h_plot = 0.4 ./ 2.^(0:7);
+colors = lines(3);
+markers = {'o','s','^'};
+
+figure('Color','w','Position',[100 100 1100 650])
+
+for i = 1:length(methods)
+    errors = zeros(size(h_plot));
+    step_sizes = zeros(size(h_plot));
+
+    for j = 1:length(h_plot)
+        [~,X_list,h_avg] = explicit_RK_fixed_step_integration(rate_func,tspan,V0,h_plot(j),methods{i});
+
+        errors(j) = norm(X_list(end,:)' - V_true);
+        step_sizes(j) = h_avg;
+    end
+
+    % slope and fit line
+    fit_coeff = polyfit(log10(step_sizes),log10(errors),1);
+    error_fit = 10.^polyval(fit_coeff,log10(step_sizes));
+
+    loglog(step_sizes,errors,markers{i}, 'Color',colors(i,:),'MarkerSize',8,'LineWidth',1.5, 'DisplayName',[method_names{i} ' data'])
+    hold on
+
+    fit_name = sprintf('%s fit ($p=%.2f$)',method_names{i},fit_coeff(1));
+    loglog(step_sizes,error_fit,'--', 'Color',colors(i,:),'LineWidth',1.5,'DisplayName',fit_name)
+end
+
+grid on
+box on
+set(gca,'FontSize',16,'TickLabelInterpreter','latex')
+
+title('Global Truncation Error for Planetary Motion', 'Interpreter','latex','FontSize',22)
+xlabel('Step size, $h$','Interpreter','latex','FontSize',20)
+ylabel('Global truncation error','Interpreter','latex','FontSize',20)
+
+legend('Location','eastoutside','Interpreter','latex','FontSize',14)
+
+exportgraphics(gcf,'RK_global_error.png','Resolution',300)
+
+
+
+
 function [t_list,X_list,h_avg,num_evals] = explicit_RK_fixed_step_integration(rate_func_in,tspan,X0,h_ref,BT_struct)
     n_steps = max(1,ceil((tspan(2) - tspan(1))/h_ref));
     t_list = linspace(tspan(1),tspan(2),n_steps + 1)';
